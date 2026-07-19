@@ -1,0 +1,12 @@
+[
+  {
+    "question": "Explain supervised learning.",
+    "reference_answer": "Supervised learning uses labeled datasets to train machine learning models.",
+    "model_answer": "Supervised learning is a machine learning technique where models learn using labeled training data."
+  },
+  {
+    "question": "What is NLP?",
+    "reference_answer": "Natural Language Processing is a field focused on enabling computers to understand human language.",
+    "model_answer": "NLP helps computers analyze and understand text and speech data."
+  }
+]
