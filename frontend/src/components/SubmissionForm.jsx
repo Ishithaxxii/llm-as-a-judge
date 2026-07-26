@@ -1,4 +1,27 @@
-return (
+import { useState } from "react";
+
+export default function SubmissionForm({ onSubmitted }) {
+  const [content, setContent] = useState("");
+  const [contentType, setContentType] = useState("code");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!content.trim()) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await onSubmitted({ content, content_type: contentType });
+      setContent("");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
     <form onSubmit={handleSubmit}>
       <label className="field-label" htmlFor="content-type">Content type</label>
       <select id="content-type" value={contentType} onChange={(e) => setContentType(e.target.value)}>
@@ -16,3 +39,4 @@ return (
       </button>
     </form>
   );
+}

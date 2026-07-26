@@ -1,9 +1,13 @@
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-
 export default function JudgeResults({ result }) {
   if (!result) return null;
 
-  const chartData = result.results.map((r) => ({ model: r.model_name, score: r.score }));
+  const maxScore = 10;
+  const chartWidth = 500;
+  const chartHeight = 160;
+  const barGap = 24;
+  const barWidth = result.results.length
+    ? (chartWidth - barGap * (result.results.length + 1)) / result.results.length
+    : 0;
 
   return (
     <div>
@@ -19,14 +23,24 @@ export default function JudgeResults({ result }) {
       </div>
 
       <div className="chart-wrap">
-        <ResponsiveContainer width="100%" height={180}>
-          <BarChart data={chartData}>
-            <XAxis dataKey="model" tick={{ fontSize: 11 }} />
-            <YAxis domain={[0, 10]} />
-            <Tooltip />
-            <Bar dataKey="score" fill="#3730A5" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <svg width="100%" viewBox={`0 0 ${chartWidth} ${chartHeight + 30}`}>
+          {result.results.map((r, i) => {
+            const barHeight = (r.score / maxScore) * chartHeight;
+            const x = barGap + i * (barWidth + barGap);
+            const y = chartHeight - barHeight;
+            return (
+              <g key={r.model_name}>
+                <rect x={x} y={y} width={barWidth} height={barHeight} rx="4" fill="#3730A5" />
+                <text x={x + barWidth / 2} y={chartHeight + 16} textAnchor="middle" fontSize="10" fill="#5B6270">
+                  {r.model_name.split(":")[0]}
+                </text>
+                <text x={x + barWidth / 2} y={y - 6} textAnchor="middle" fontSize="11" fontWeight="700" fill="#12151C">
+                  {r.score.toFixed(1)}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
       </div>
 
       {result.results.map((r) => (
