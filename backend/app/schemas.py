@@ -46,3 +46,9 @@ class JudgeResponse(BaseModel):
     aggregate_score: float
     agreement: float
     flagged_disagreement: bool = False
+    # New metrics
+    jaccard: float = 0.0
+    cosine: float = 0.0
+    z_score: float | None = None
+    score_std: float = 0.0
+    num_valid_judges: int = 0

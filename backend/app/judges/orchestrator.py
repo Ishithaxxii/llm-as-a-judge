@@ -5,6 +5,7 @@ import httpx
 from app.config import get_settings
 from app.judges.prompts import build_scoring_prompt
 import random
+from app.judges.metrics import compute_metrics
 
 settings = get_settings()
 
@@ -105,13 +106,5 @@ async def run_judges(content, content_type, criteria, judges):
     async with httpx.AsyncClient() as client:
         return await asyncio.gather(*[_run_single_judge(client, j, prompt) for j in judges])
 
-def aggregate(outcomes):
-    valid = [o for o in outcomes if o.error is None]
-    if not valid:
-        return {"aggregate_score": 0.0, "agreement": 0.0, "flagged_disagreement": True}
-    scores = [o.score for o in valid]
-    avg = mean(scores)
-    std = pstdev(scores) if len(scores) > 1 else 0.0
-    cv = (std / avg) if avg else 0.0
-    agreement = max(0.0, min(1.0, 1 - cv))
-    return {"aggregate_score": round(avg, 2), "agreement": round(agreement, 2), "flagged_disagreement": agreement < 0.7}
+def aggregate(outcomes, historical_scores: list[float] | None = None):
+    return compute_metrics(outcomes, historical_scores)
