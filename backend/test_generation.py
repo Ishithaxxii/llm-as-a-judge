@@ -1,4 +1,4 @@
-import json
+﻿import json
 import urllib.request
 import urllib.error
 from pathlib import Path
@@ -74,6 +74,8 @@ def test_groq() -> None:
 
 if __name__ == "__main__":
     if not Path(".env").exists():
-        raise SystemExit("Missing backend/.env. Create it with GEMINI_API_KEY and GROQ_API_KEY.")
+        raise SystemExit(
+            "Missing backend/.env. Create it with GEMINI_API_KEY and GROQ_API_KEY."
+        )
     test_gemini()
     test_groq()
