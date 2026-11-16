@@ -1,2 +1,11 @@
-asyncpg
+@'
+fastapi
+uvicorn[standard]
 sqlalchemy[asyncio]
+aiosqlite
+asyncpg
+pydantic
+pydantic-settings
+httpx
+greenlet
+'@ | Set-Content backend/requirements.txt -Encoding UTF8
