@@ -15,17 +15,26 @@ class RubricOut(RubricCreate):
     id: str
     model_config = {"from_attributes": True}
 
+
 class SubmissionCreate(BaseModel):
     content: str
+    query: str | None = None
+    reference_answer: str | None = None
+    tool_trace: list[dict] | None = None
     content_type: str = "text"
     rubric_id: str | None = None
+
 
 class SubmissionOut(BaseModel):
     id: str
     content: str
+    query: str | None = None
+    reference_answer: str | None = None
+    tool_trace: list[dict] | None = None
     content_type: str
     rubric_id: str | None
     model_config = {"from_attributes": True}
+
 
 class JudgeRequest(BaseModel):
     submission_id: str
@@ -35,7 +44,7 @@ class JudgeResultOut(BaseModel):
     model_name: str
     score: float
     reasoning: str
-    criterion_scores: dict[str, float]
+    criterion_scores: dict[str, float | None]
     confidence: float | None
     latency_ms: int | None
     model_config = {"from_attributes": True}

@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.database import get_db
 from app.judges.orchestrator import JudgeOutcome, aggregate, run_judges
+from app.judges.metrics import calculate_weighted_score
 from app.models import JudgeResult, Rubric, Submission
 from app.schemas import JudgeRequest, JudgeResponse, JudgeResultOut
 
@@ -18,7 +19,48 @@ async def judge_submission(payload: JudgeRequest, db: AsyncSession = Depends(get
         raise HTTPException(404, "Submission not found")
 
     # Default criteria
-    criteria = [{"name": "overall_quality", "description": "General quality", "weight": 1.0, "scale": 10}]
+    criteria = [
+        {
+            "name": "answer_correctness",
+            "description": "Factual accuracy and correctness of the response.",
+            "weight": 0.25,
+            "scale": 10,
+        },
+        {
+            "name": "relevance",
+            "description": "How relevant and focused the response is to the subject.",
+            "weight": 0.15,
+            "scale": 10,
+        },
+        {
+            "name": "query_alignment",
+            "description": "How accurately the response addresses the original user query.",
+            "weight": 0.20,
+            "scale": 10,
+        },
+        {
+            "name": "semantic_similarity",
+            "description": "How closely the response matches the meaning of the reference answer.",
+            "weight": 0.15,
+            "scale": 10,
+        },
+        {
+            "name": "tone",
+            "description": "Clarity, professionalism, and suitability of communication.",
+            "weight": 0.10,
+            "scale": 10,
+        },
+        {
+            "name": "tool_calling",
+            "description": "Appropriateness and successful execution of tool calls.",
+            "weight": 0.15,
+            "scale": 10,
+        },
+    ]
+    criterion_weights = {
+        c["name"]: c["weight"]
+        for c in criteria
+    }
     if submission.rubric_id:
         rubric = await db.get(Rubric, submission.rubric_id)
         if rubric:
@@ -39,10 +81,13 @@ async def judge_submission(payload: JudgeRequest, db: AsyncSession = Depends(get
     new_results = []
     if to_run:
         outcomes = await run_judges(
-            submission.content,
-            submission.content_type,
-            criteria,
-            to_run
+            content=submission.content,
+            content_type=submission.content_type,
+            criteria=criteria,
+            judges=to_run,
+            query=submission.query,
+            reference_answer=submission.reference_answer,
+            tool_trace=submission.tool_trace,
         )
         for o in outcomes:
             if o.error:
@@ -55,6 +100,11 @@ async def judge_submission(payload: JudgeRequest, db: AsyncSession = Depends(get
                 criterion_scores=o.criterion_scores,
                 confidence=o.confidence,
                 latency_ms=o.latency_ms,
+            )
+            o.score = calculate_weighted_score(
+                o.criterion_scores,
+                criterion_weights,
+                fallback_score=o.score,
             )
             db.add(rec)
             new_results.append(rec)
@@ -83,8 +133,12 @@ async def judge_submission(payload: JudgeRequest, db: AsyncSession = Depends(get
     hist_query = await db.execute(select(JudgeResult.score).limit(200))
     historical_scores = [row[0] for row in hist_query.all()]
 
-    agg = aggregate(outcomes_for_metrics, historical_scores)
-
+    agg = aggregate(
+        outcomes_for_metrics,
+        historical_scores,
+        criterion_weights,
+    )
+    
     return JudgeResponse(
         submission_id=submission.id,
         results=[JudgeResultOut.model_validate(r) for r in all_results],

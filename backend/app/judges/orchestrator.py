@@ -82,7 +82,10 @@ async def _run_single_judge(client, model_name, prompt):
             model_name=model_name,
             score=float(parsed["overall_score"]),
             reasoning=parsed.get("reasoning", ""),
-            criterion_scores={k: float(v) for k, v in parsed.get("criterion_scores", {}).items()},
+            criterion_scores={
+                k: None if v is None else float(v)
+                for k, v in parsed.get("criterion_scores", {}).items()
+            },
             confidence=parsed.get("confidence"),
             latency_ms=latency_ms,
         )
@@ -96,15 +99,46 @@ async def _run_single_judge(client, model_name, prompt):
 #         return await asyncio.gather(*[_run_single_judge(client, j, prompt) for j in judges])
 
 # TEST RUN_JUDGES
-async def run_judges(content, content_type, criteria, judges):
+async def run_judges(
+    content,
+    content_type,
+    criteria,
+    judges,
+    query=None,
+    reference_answer=None,
+    tool_trace=None,
+):
     judges = judges[: settings.max_judges_per_request]
 
+    prompt = build_scoring_prompt(
+        content=content,
+        content_type=content_type,
+        criteria=criteria,
+        query=query,
+        reference_answer=reference_answer,
+        tool_trace=tool_trace,
+    )
+
     if settings.mock_judges:
-        return await asyncio.gather(*[_mock_judge(j, "") for j in judges])
+        return await asyncio.gather(
+            *[_mock_judge(j, prompt) for j in judges]
+        )
 
-    prompt = build_scoring_prompt(content, content_type, criteria)
     async with httpx.AsyncClient() as client:
-        return await asyncio.gather(*[_run_single_judge(client, j, prompt) for j in judges])
-
-def aggregate(outcomes, historical_scores: list[float] | None = None):
-    return compute_metrics(outcomes, historical_scores)
+        return await asyncio.gather(
+            *[
+                _run_single_judge(client, j, prompt)
+                for j in judges
+            ]
+        )
+    
+def aggregate(
+    outcomes,
+    historical_scores: list[float] | None = None,
+    criterion_weights: dict[str, float] | None = None,
+):
+    return compute_metrics(
+        outcomes,
+        historical_scores,
+        criterion_weights,
+    )

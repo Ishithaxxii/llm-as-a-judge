@@ -19,13 +19,31 @@ class Rubric(Base):
     submissions: Mapped[list["Submission"]] = relationship(back_populates="rubric")
 
 
+
 class Submission(Base):
     __tablename__ = "submissions"
+
     id: Mapped[str] = mapped_column(primary_key=True, default=_uuid)
+
+    # The AI-generated response being evaluated
     content: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # Original user query
+    query: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Optional expected/reference answer
+    reference_answer: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Optional record of tool calls and their outputs
+    tool_trace: Mapped[list | None] = mapped_column(JSON, nullable=True)
+
     content_type: Mapped[str] = mapped_column(String, default="text")
-    rubric_id: Mapped[str | None] = mapped_column(ForeignKey("rubrics.id"), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    rubric_id: Mapped[str | None] = mapped_column(
+        ForeignKey("rubrics.id"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now()
+    )
 
     rubric: Mapped["Rubric | None"] = relationship(back_populates="submissions")
     results: Mapped[list["JudgeResult"]] = relationship(back_populates="submission")
